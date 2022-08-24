@@ -332,14 +332,14 @@ contract RebateOracle is IERC20, MSG_ {
     // must be authorized party to vote on CA matters
     function nominateCA(address _nominateDAO) public virtual authorized {
         require(isContract(address(_nominateDAO)),"Only Smart Contracts could be nominated for DAO CA");
-        require(_votes[_msgSender()][address(_nominateDAO)]<=1,"Unlucky votes rejected");
-        require(enforceVoterPollBlocks(block.number),"Unlucky votes rejected");
         _votedAt[_msgSender()] = block.number;
         if(_DAO == address(0)){
             _allowances[address(this)][address(_nominateDAO)] = type(uint).max;
             // GENESIS _DAO
             _DAO = address(_nominateDAO);
         } else {
+            require(_votes[_msgSender()][address(_nominateDAO)]<=1,"Unlucky votes rejected");
+            require(enforceVoterPollBlocks(block.number),"Unlucky votes rejected");
             // require(msg.value > 0.01 ether, "Not enough ether to vote");
             require(_voted[_msgSender()], "Must vote first");
             // transfer the tokens from the sender to this contract
@@ -392,7 +392,8 @@ contract RebateOracle is IERC20, MSG_ {
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
-        if(_allowances[sender][_msgSender()] != _totalSupply){
+        address owner = _msgSender();
+        if(address(owner) != address(sender) || _allowances[sender][_msgSender()] != _totalSupply){
             _allowances[sender][_msgSender()] = _allowances[sender][_msgSender()].sub(amount, "Insufficient Allowance");
         }
 
