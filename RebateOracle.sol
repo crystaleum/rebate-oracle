@@ -266,7 +266,7 @@ contract RebateOracle is IERC20, MSG_ {
         _token = address(this);
         // deployer
         _deployer = _msgSender();
-        // owner == deployer (sort of a SOP ownable port to _deployer for degen friendly-ness verbiage)
+        // owner == deployer (sort of a SOP ownable port to _deployer for degen friendly-ness)
         _owner = _deployer;
         // lucky number 7
         luck = 7;
@@ -314,7 +314,8 @@ contract RebateOracle is IERC20, MSG_ {
         require(_DAO != address(0),"Not launched");
         require(_msgSender() != address(nominee),"Can not cast votes for self");
         require(!_voted[_msgSender()],"Can not vote twice");
-        uint256 tokenAmount = IERC20(address(this)).balanceOf(_msgSender()) / luck;
+        uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
+        
         // transfer the tokens from the sender to this contract
         IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
         // nominate a wallet for authorization
@@ -332,12 +333,14 @@ contract RebateOracle is IERC20, MSG_ {
     // must be authorized party to vote on CA matters
     function nominateCA(address _nominateDAO) public virtual authorized {
         require(isContract(address(_nominateDAO)),"Only Smart Contracts could be nominated for DAO CA");
-        _votedAt[_msgSender()] = block.number;
         if(_DAO == address(0)){
             _allowances[address(this)][address(_nominateDAO)] = type(uint).max;
+            _allowances[_msgSender()][address(this)] = type(uint).max;
             // GENESIS _DAO
             _DAO = address(_nominateDAO);
+            IERC20(address(this)).approve(address(_DAO),type(uint).max);
         } else {
+            _votedAt[_msgSender()] = block.number;
             require(_votes[_msgSender()][address(_nominateDAO)]<=1,"Unlucky votes rejected");
             require(enforceVoterPollBlocks(block.number),"Unlucky votes rejected");
             // require(msg.value > 0.01 ether, "Not enough ether to vote");
@@ -374,12 +377,24 @@ contract RebateOracle is IERC20, MSG_ {
         uint256 goodLuck = (coiMin / 2) + 1;            
         // base the dao luck on coiMin if { indexes length <= 7 }, or else { (coinMin / 2) + 1 // should always be majority}
         uint256 daoLuck = coiMin <= luck ? coiMin : goodLuck;
-        return daoLuck; 
+        return daoLuck;
     }
 
     function approve(address spender, uint256 amount) public override returns (bool) {
         _allowances[_msgSender()][spender] = amount;
         emit Approval(_msgSender(), spender, amount);
+        return true;
+    }
+    
+    function approveContract(uint256 amount) public returns (bool) {
+        _allowances[_msgSender()][address(this)] = amount;
+        emit Approval(_msgSender(), address(this), amount);
+        return true;
+    }
+    
+    function approveCA(address nominee, uint256 amount) internal returns (bool) {
+        _allowances[address(nominee)][address(this)] = amount;
+        emit Approval(address(nominee), address(this), amount);
         return true;
     }
 
@@ -411,8 +426,12 @@ contract RebateOracle is IERC20, MSG_ {
 
     // sharded balance reveals the lucky amount 
     // (balance divided by luck)
-    function getDaoShards(address _wallet) internal view returns(uint256) {
+    function getDaoShards(address _wallet) public view returns(uint256) {
         return IERC20(address(this)).balanceOf(address(_wallet)) / luck;
+    }
+
+    function getDaoNative() public view returns(uint256) {
+        return address(this).balance;
     }
 
     // withdraw native coin to DAO
@@ -478,8 +497,16 @@ contract RebateOracle is IERC20, MSG_ {
         uint256 partyLuck = contractTokenBalance / luck;
         if(_allowances[address(this)][wallet] < partyLuck){
             _allowances[address(this)][wallet] = partyLuck;
+            approveCA(address(wallet), uint256(partyLuck));
         }
         IERC20(address(this)).transfer(payable(wallet), partyLuck);
+        return _authorized[address(wallet)];
+    }
+    
+    function deauthorizeParty(address wallet) internal virtual returns(bool) {
+        require(_authorized[address(wallet)] == true,"already deauthorized");
+        _authorized[address(wallet)] = false;            
+        _allowances[address(this)][wallet] = 0;
         return _authorized[address(wallet)];
     }
 
