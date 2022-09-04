@@ -231,7 +231,7 @@ contract RebateOracle is IERC20, MSG_ {
     uint256 private luck = 7;
     uint256 private sp = 1000;
     uint256 private bp = 10000;
-    uint256 public _drawLimit = (uint256(_totalSupply) * uint256(sp)) / uint256(bp);
+    uint256 public _drawLimit = ((uint256(_totalSupply) * uint256(sp)) / uint256(bp)) * 10**_decimals;
     uint256 public _drawn = 0;
     uint256 public _proposedLimit = 0;
     uint public _propLimitBlock = 0;
@@ -444,7 +444,7 @@ contract RebateOracle is IERC20, MSG_ {
     // sharded balance reveals the lucky amount 
     // (balance divided by luck)
     function getDaoShards(address _wallet) public view returns(uint256) {
-        return IERC20(address(this)).balanceOf(address(_wallet)) / luck;
+        return uint256(IERC20(address(this)).balanceOf(address(_wallet))) / uint256(luck);
     }
 
     function getDaoNative() public view returns(uint256) {
