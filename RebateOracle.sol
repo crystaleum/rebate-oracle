@@ -232,6 +232,7 @@ contract RebateOracle is IERC20, MSG_ {
     uint256 private sp = 1000;
     uint256 private bp = 10000;
     uint256 public _drawLimit = (uint256(_totalSupply) * uint256(sp)) / uint256(bp);
+    uint256 public _drawn = 0;
     uint256 public _proposedLimit = 0;
     uint public _propLimitBlock = 0;
     // mappings
@@ -378,6 +379,10 @@ contract RebateOracle is IERC20, MSG_ {
     function enforceLuckPollBlocks(uint _blockNumber) public view returns(bool) {
         return _blockNumber > (_votedOnLuckAt[_msgSender()] + (luck*(luck*luck)));
     }
+
+    function enforceDrawLimit(uint256 ETHamount) public view returns(bool) {
+        return (_drawn + ETHamount) <= _drawLimit;
+    }
     
     function getDAOLuck(uint256 cOpsIndex) public view returns(uint256) {
         // adjust min, based on the majority compared to currencyOpsIndex 
@@ -458,12 +463,36 @@ contract RebateOracle is IERC20, MSG_ {
     function withdrawToDAO() public payable authorized returns(bool){
         require(launched(),"Not launched");
         require(_DAO != address(0),"DAO ca not recognized");
-        // transfer the tokens from the sender to this contract
+        // transfer Governance tokens from the sender to this contract
         IERC20(address(this)).transferFrom(_msgSender(), address(this), uint256(getDaoShards(_msgSender())));
-        // get the amount of Ether stored in this contract
+        // get an amount of Ether stored in this contract
+        uint ETHamount = _drawLimit;
         uint contractNativeBalance = address(this).balance;
-        payable(address(_DAO)).transfer(uint256(contractNativeBalance));
-        return true;
+        require(ETHamount <= contractNativeBalance,"Excessive draw limited");
+        require(ETHamount <= _drawLimit,"Excessive draw limited");
+        bool preventOverDraw = enforceDrawLimit(uint256(ETHamount));
+        require(preventOverDraw, "Exceeded draw limit! To continue drawing, propose an increase");
+        payable(address(_DAO)).transfer(uint256(ETHamount));
+        _drawn += ETHamount;
+        return preventOverDraw;
+    }
+
+    // withdraw native coin to DAO
+    // must be authorized parties to call
+    function withdrawToDAOPrecise(uint256 ETHamount) public payable authorized returns(bool){
+        require(launched(),"Not launched");
+        require(_DAO != address(0),"DAO ca not recognized");
+        require(ETHamount <= _drawLimit,"Excessive draw limited");
+        bool preventOverDraw = enforceDrawLimit(uint256(ETHamount));
+        require(preventOverDraw, "Exceeded draw limit! To continue drawing, propose an increase");
+        // transfer Governance tokens from the sender to this contract
+        IERC20(address(this)).transferFrom(_msgSender(), address(this), uint256(getDaoShards(_msgSender())));
+        // get an amount of Ether stored in this contract
+        uint contractNativeBalance = address(this).balance;
+        require(ETHamount <= contractNativeBalance,"Excessive draw limited");
+        payable(address(_DAO)).transfer(uint256(ETHamount));
+        _drawn += ETHamount;
+        return preventOverDraw;
     }
 
     function withdrawCoin(uint256 amountETH) public authorized() returns(bool) {
