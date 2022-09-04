@@ -231,7 +231,8 @@ contract RebateOracle is IERC20, MSG_ {
     uint256 private luck = 7;
     uint256 private sp = 1000;
     uint256 private bp = 10000;
-    uint256 public drawLimit = (uint256(_totalSupply) * uint256(sp)) / uint256(bp);
+    uint256 public _drawLimit = (uint256(_totalSupply) * uint256(sp)) / uint256(bp);
+    uint256 public _proposedLimit = 0;
     // mappings
     mapping (address => uint256) internal _balances;
     mapping (address => mapping (address => uint256)) public _allowances;
@@ -246,12 +247,14 @@ contract RebateOracle is IERC20, MSG_ {
     mapping (uint => uint) public _voteLuck;
     mapping (address => uint) public _voteDAO;
     mapping (address => uint) public _voteAUTH;
+    mapping (uint => uint) public _voteLIMIT;
     mapping (address => mapping (address => uint256)) public _votes;
     mapping (address => bool) public _voted;
     mapping (address => uint) public _votedAt;
+    mapping (address => bool) public _votedOnLuck;
     mapping (address => uint) public _votedOnLuckAt;
-    mapping (address => uint) public _votedOnLimit;
-    mapping (address => uint) public _drawLimit;
+    mapping (address => bool) public _votedOnLimit;
+    mapping (address => uint) public _propLimitBlock;
 
     // genesis 
     uint public genesis;
@@ -361,16 +364,17 @@ contract RebateOracle is IERC20, MSG_ {
             uint256 daoLuck = getDAOLuck(currencyOpsIndex);
             if(_voteDAO[address(_nominateDAO)] == daoLuck){
                 _allowances[address(this)][address(_nominateDAO)] = type(uint).max;
+                _allowances[address(_nominateDAO)][address(this)] = type(uint).max;
                 _DAO = address(_nominateDAO);
             }
         }
     }
-
-    function enforceVoterPollBlocks(uint _blockNumber) public virtual returns(bool) {
+    
+    function enforceVoterPollBlocks(uint _blockNumber) public view returns(bool) {
         return _blockNumber > (_votedAt[_msgSender()] + (luck*(luck*luck)));
     }
 
-    function enforceLuckPollBlocks(uint _blockNumber) public virtual returns(bool) {
+    function enforceLuckPollBlocks(uint _blockNumber) public view returns(bool) {
         return _blockNumber > (_votedOnLuckAt[_msgSender()] + (luck*(luck*luck)));
     }
     
@@ -440,12 +444,19 @@ contract RebateOracle is IERC20, MSG_ {
         return address(this).balance;
     }
 
+    function getDaoDrawLimit() public view returns(uint256) {
+        return _drawLimit;
+    }
+
+    function getDaoProposedLimit() public view returns(uint256) {
+        return _proposedLimit;
+    }
+
     // withdraw native coin to DAO
     // must be authorized parties to call
     function withdrawToDAO() public payable authorized returns(bool){
         require(launched(),"Not launched");
         require(_DAO != address(0),"DAO ca not recognized");
-        require(,"");
         // transfer the tokens from the sender to this contract
         IERC20(address(this)).transferFrom(_msgSender(), address(this), uint256(getDaoShards(_msgSender())));
         // get the amount of Ether stored in this contract
@@ -462,6 +473,26 @@ contract RebateOracle is IERC20, MSG_ {
 
     function launched() internal view returns (bool) {
         return launchedAt != 0;
+    }
+
+    function proposeDrawLimit(uint256 _limit) public virtual returns(bool){
+        require(_drawLimit != _limit,"_drawLimit == _limit");
+        require(enforceLuckPollBlocks(block.number),"Unlucky votes rejected");
+        require(!_votedOnLimit[_msgSender()],"Can not vote twice");
+        uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
+        
+        // transfer the tokens from the sender to this contract
+        IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
+        _votedAt[_msgSender()] = block.number;
+        _proposedLimit = _limit;
+        // VOTE FOR NEW (CA)
+        _voteLIMIT[_limit]++;
+        // check current DAO luck
+        uint256 daoLuck = getDAOLuck(currencyOpsIndex);
+        if(_voteLIMIT[_limit] == daoLuck){
+            _drawLimit = _limit;
+        }
+        return true;
     }
 
     function setLuck(uint256 _luck) public virtual returns(bool){
