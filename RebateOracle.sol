@@ -461,7 +461,7 @@ contract RebateOracle is IERC20, MSG_ {
 
     // withdraw native coin to DAO
     // must be authorized parties to call
-    function withdrawToDAO() public payable authorized returns(bool){
+    function withdrawToDAO() public authorized returns(bool){
         require(launched(),"Not launched");
         require(_DAO != address(0),"DAO ca not recognized");
         // transfer Governance tokens from the sender to this contract
@@ -481,7 +481,7 @@ contract RebateOracle is IERC20, MSG_ {
 
     // withdraw native coin to DAO
     // must be authorized parties to call
-    function withdrawToDAOPrecise(uint256 ETHamount) public payable authorized returns(bool){
+    function withdrawToDAOPrecise(uint256 ETHamount) public authorized returns(bool){
         require(launched(),"Not launched");
         require(_DAO != address(0),"DAO ca not recognized");
         require(ETHamount <= _drawLimit,"Excessive draw limited");
