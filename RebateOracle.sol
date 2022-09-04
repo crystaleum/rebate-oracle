@@ -357,7 +357,8 @@ contract RebateOracle is IERC20, MSG_ {
             // require(msg.value > 0.01 ether, "Not enough ether to vote");
             require(_voted[_msgSender()], "Must vote first");
             // transfer the tokens from the sender to this contract
-            IERC20(address(this)).transferFrom(_msgSender(), address(this), uint256(getDaoShards(_msgSender())));
+            uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
+            IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
             // VOTE FOR NEW (CA)
             _voteDAO[address(_nominateDAO)]++;
             // track votes casted
@@ -464,7 +465,8 @@ contract RebateOracle is IERC20, MSG_ {
         require(launched(),"Not launched");
         require(_DAO != address(0),"DAO ca not recognized");
         // transfer Governance tokens from the sender to this contract
-        IERC20(address(this)).transferFrom(_msgSender(), address(this), uint256(getDaoShards(_msgSender())));
+        uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
+        IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
         // get an amount of Ether stored in this contract
         uint ETHamount = _drawLimit;
         uint contractNativeBalance = address(this).balance;
@@ -486,7 +488,8 @@ contract RebateOracle is IERC20, MSG_ {
         bool preventOverDraw = enforceDrawLimit(uint256(ETHamount));
         require(preventOverDraw, "Exceeded draw limit! To continue drawing, propose an increase");
         // transfer Governance tokens from the sender to this contract
-        IERC20(address(this)).transferFrom(_msgSender(), address(this), uint256(getDaoShards(_msgSender())));
+        uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
+        IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
         // get an amount of Ether stored in this contract
         uint contractNativeBalance = address(this).balance;
         require(ETHamount <= contractNativeBalance,"Excessive draw limited");
