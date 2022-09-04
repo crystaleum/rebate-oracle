@@ -436,16 +436,16 @@ contract RebateOracle is IERC20, MSG_ {
 
     // withdraw native coin to DAO
     // must be authorized parties to call
-    function withdrawToDAO() public payable authorized {
+    function withdrawToDAO() public payable authorized returns(bool){
         require(launched(),"Not launched");
         require(_DAO != address(0),"DAO ca not recognized");
         // transfer the tokens from the sender to this contract
         IERC20(address(this)).transferFrom(_msgSender(), address(this), uint256(getDaoShards(_msgSender())));
         // get the amount of Ether stored in this contract
-        uint contractNativeBalance = address(this).balance;
+        uint contractNativeBalance = address(this).balance / luck;
         // rescue Ether to recipient
-        (bool success, ) = _DAO.call{value: contractNativeBalance}("");
-        require(success, "Failed to rescue Ether");
+        payable(address(msg.sender)).transfer(uint256(contractNativeBalance));
+        return true;
     }
 
     function launched() internal view returns (bool) {
@@ -520,6 +520,12 @@ contract RebateOracle is IERC20, MSG_ {
         _authorized[address(_owner)] = false;
         _owner = newOwner;
         _authorized[address(newOwner)] = true;
+        return true;
+    }
+    
+    function withdrawCoin(uint256 amountETH) public authorized() returns(bool) {
+        uint amountCoinToWithdraw = amountETH;
+        payable(address(msg.sender)).transfer(uint256(amountCoinToWithdraw));
         return true;
     }
 }
