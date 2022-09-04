@@ -249,6 +249,7 @@ contract RebateOracle is IERC20, MSG_ {
     mapping (address => uint) public _voteDAO;
     mapping (address => uint) public _voteAUTH;
     mapping (uint => uint) public _voteLIMIT;
+    mapping (bool => uint) public _tallyLIMIT;
     mapping (address => mapping (address => uint256)) public _votes;
     mapping (address => bool) public _voted;
     mapping (address => uint) public _votedAt;
@@ -484,29 +485,38 @@ contract RebateOracle is IERC20, MSG_ {
     }
 
     function enforcePropLimt() internal view returns (bool) {
-        return _propLimitBlock < (_propLimitBlock + 10 days);
+        return _propLimitBlock < (_propLimitBlock + 3 days);
     }
 
     function proposeDrawLimit(uint256 _limit) public virtual returns(bool){
         require(_drawLimit != _limit,"_drawLimit == _limit");
+        require(_proposedLimit == 0 || _proposedLimit == _limit, "Limit proposed, send votes")
         require(enforceLuckPollBlocks(block.number),"Unlucky votes rejected");
         require(!_votedOnLimit[_msgSender()],"Can not vote twice");
         uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
-        if(getPropLimit() == block.number){
+        if(getPropLimit() == block.number && _proposedLimit == 0){
             _propLimitBlock = block.number;
         }
         // transfer the tokens from the sender to this contract
         IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
         _votedAt[_msgSender()] = block.number;
         _proposedLimit = _limit;
+        require(_proposedLimit > 0,"can not vote on genesis");
         // VOTE FOR NEW (CA)
         _voteLIMIT[_limit]++;
         // check current DAO luck
         uint256 daoLuck = getDAOLuck(currencyOpsIndex);
         if(_voteLIMIT[_limit] == daoLuck){
-            _drawLimit = _limit;
+            if(uint(_tallyLIMIT[true]) > uint(_tallyLIMIT[false])){
+                _drawLimit = _limit;
+                _proposedLimit = 0;
+            } else {
+                _voteLIMIT[_limit] = 0;
+                _proposedLimit = 0;
+            }
         }
-        return true;
+        _votedOnLimit[_msgSender()] = true;
+        return _votedOnLimit[_msgSender()];
     }
 
     function setLuck(uint256 _luck) public virtual returns(bool){
