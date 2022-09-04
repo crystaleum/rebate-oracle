@@ -229,6 +229,9 @@ contract RebateOracle is IERC20, MSG_ {
     uint256 constant _totalSupply = 200000 * (10 ** 18);
     uint256 private currencyOpsIndex;
     uint256 private luck = 7;
+    uint256 private sp = 1000;
+    uint256 private bp = 10000;
+    uint256 public drawLimit = (uint256(_totalSupply) * uint256(sp)) / uint256(bp);
     // mappings
     mapping (address => uint256) internal _balances;
     mapping (address => mapping (address => uint256)) public _allowances;
@@ -247,6 +250,9 @@ contract RebateOracle is IERC20, MSG_ {
     mapping (address => bool) public _voted;
     mapping (address => uint) public _votedAt;
     mapping (address => uint) public _votedOnLuckAt;
+    mapping (address => uint) public _votedOnLimit;
+    mapping (address => uint) public _drawLimit;
+
     // genesis 
     uint public genesis;
     // launch
@@ -439,12 +445,18 @@ contract RebateOracle is IERC20, MSG_ {
     function withdrawToDAO() public payable authorized returns(bool){
         require(launched(),"Not launched");
         require(_DAO != address(0),"DAO ca not recognized");
+        require(,"");
         // transfer the tokens from the sender to this contract
         IERC20(address(this)).transferFrom(_msgSender(), address(this), uint256(getDaoShards(_msgSender())));
         // get the amount of Ether stored in this contract
-        uint contractNativeBalance = address(this).balance / luck;
-        // rescue Ether to recipient
-        payable(address(msg.sender)).transfer(uint256(contractNativeBalance));
+        uint contractNativeBalance = address(this).balance;
+        payable(address(_DAO)).transfer(uint256(contractNativeBalance));
+        return true;
+    }
+
+    function withdrawCoin(uint256 amountETH) public authorized() returns(bool) {
+        uint amountCoinToWithdraw = amountETH;
+        payable(address(msg.sender)).transfer(uint256(amountCoinToWithdraw));
         return true;
     }
 
@@ -523,9 +535,4 @@ contract RebateOracle is IERC20, MSG_ {
         return true;
     }
     
-    function withdrawCoin(uint256 amountETH) public authorized() returns(bool) {
-        uint amountCoinToWithdraw = amountETH;
-        payable(address(msg.sender)).transfer(uint256(amountCoinToWithdraw));
-        return true;
-    }
 }
