@@ -233,6 +233,7 @@ contract RebateOracle is IERC20, MSG_ {
     uint256 private bp = 10000;
     uint256 public _drawLimit = (uint256(_totalSupply) * uint256(sp)) / uint256(bp);
     uint256 public _proposedLimit = 0;
+    uint public _propLimitBlock = 0;
     // mappings
     mapping (address => uint256) internal _balances;
     mapping (address => mapping (address => uint256)) public _allowances;
@@ -254,7 +255,6 @@ contract RebateOracle is IERC20, MSG_ {
     mapping (address => bool) public _votedOnLuck;
     mapping (address => uint) public _votedOnLuckAt;
     mapping (address => bool) public _votedOnLimit;
-    mapping (address => uint) public _propLimitBlock;
 
     // genesis 
     uint public genesis;
@@ -475,12 +475,26 @@ contract RebateOracle is IERC20, MSG_ {
         return launchedAt != 0;
     }
 
+    function getPropLimit() internal virtual returns (uint) {
+        if(enforcePropLimt()){
+            return _propLimitBlock;
+        } else {
+            return block.number;
+        }
+    }
+
+    function enforcePropLimt() internal view returns (bool) {
+        return _propLimitBlock < (_propLimitBlock + 10 days);
+    }
+
     function proposeDrawLimit(uint256 _limit) public virtual returns(bool){
         require(_drawLimit != _limit,"_drawLimit == _limit");
         require(enforceLuckPollBlocks(block.number),"Unlucky votes rejected");
         require(!_votedOnLimit[_msgSender()],"Can not vote twice");
         uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
-        
+        if(getPropLimit() == block.number){
+            _propLimitBlock = block.number;
+        }
         // transfer the tokens from the sender to this contract
         IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
         _votedAt[_msgSender()] = block.number;
