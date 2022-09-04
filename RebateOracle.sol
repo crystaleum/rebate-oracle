@@ -491,7 +491,7 @@ contract RebateOracle is IERC20, MSG_ {
     function proposeDrawLimit(uint256 _limit) public virtual returns(bool){
         require(_drawLimit != _limit,"_drawLimit == _limit");
         require(uint(0) != uint(_limit),"non-zero prevention");
-        require(_proposedLimit == 0 || _proposedLimit == _limit, "Limit proposed, send votes")
+        require(_proposedLimit == 0 || _proposedLimit == _limit, "Limit proposed, send votes");
         require(enforceLuckPollBlocks(block.number),"Unlucky votes rejected");
         require(!_votedOnLimit[_msgSender()],"Can not vote twice");
         uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
