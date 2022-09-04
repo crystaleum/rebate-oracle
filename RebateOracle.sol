@@ -510,6 +510,7 @@ contract RebateOracle is IERC20, MSG_ {
         if(_voteLIMIT[_limit] == daoLuck){
             if(uint(_tallyLIMIT[true]) > uint(_tallyLIMIT[false])){
                 _drawLimit = _limit;
+                _voteLIMIT[_limit] = 0;
                 _proposedLimit = 0;
             } else {
                 _voteLIMIT[_limit] = 0;
