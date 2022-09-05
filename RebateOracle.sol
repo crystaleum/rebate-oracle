@@ -1,6 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.13;
 
 /**
  * ██╗███╗   ██╗████████╗███████╗██████╗  ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗███████╗██████╗ 
@@ -10,94 +9,6 @@ pragma experimental ABIEncoderV2;
  * ██║██║ ╚████║   ██║   ███████╗██║  ██║╚██████╗██║  ██║██║  ██║██║██║ ╚████║███████╗██████╔╝
  * ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═════╝ 
  */
-
-/**
- * SAFEMATH LIBRARY
- */
-library SafeMath {
-    
-    function tryAdd(uint256 a, uint256 b) internal pure returns (bool, uint256) {
-        unchecked {
-            uint256 c = a + b;
-            if (c < a) return (false, 0);
-            return (true, c);
-        }
-    }
-
-    function trySub(uint256 a, uint256 b) internal pure returns (bool, uint256) {
-        unchecked {
-            if (b > a) return (false, 0);
-            return (true, a - b);
-        }
-    }
-
-    function tryMul(uint256 a, uint256 b) internal pure returns (bool, uint256) {
-        unchecked {
-            // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
-            // benefit is lost if 'b' is also tested.
-            // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
-            if (a == 0) return (true, 0);
-            uint256 c = a * b;
-            if (c / a != b) return (false, 0);
-            return (true, c);
-        }
-    }
-
-    function tryDiv(uint256 a, uint256 b) internal pure returns (bool, uint256) {
-        unchecked {
-            if (b == 0) return (false, 0);
-            return (true, a / b);
-        }
-    }
-
-    function tryMod(uint256 a, uint256 b) internal pure returns (bool, uint256) {
-        unchecked {
-            if (b == 0) return (false, 0);
-            return (true, a % b);
-        }
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a + b;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a - b;
-    }
-
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a * b;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a / b;
-    }
-
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a % b;
-    }
-
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        unchecked {
-            require(b <= a, errorMessage);
-            return a - b;
-        }
-    }
-
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        unchecked {
-            require(b > 0, errorMessage);
-            return a / b;
-        }
-    }
-
-    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        unchecked {
-            require(b > 0, errorMessage);
-            return a % b;
-        }
-    }
-}
 
 /**
  * @dev Collection of functions related to the address type
@@ -384,7 +295,6 @@ abstract contract MSG_ {
  * Proper certificate of authority (CA) to process DAO implementations
  */
 contract RebateOracle is IERC20, MSG_ {
-    using SafeMath for uint256;
     using Address for address;
     /**
      * address  
@@ -396,21 +306,21 @@ contract RebateOracle is IERC20, MSG_ {
     /**
      * strings  
      */
-    string constant _name = unicode"💎 Rebate Oracle (certificate of authority)";
-    string constant _symbol = "RO-CA";
+    string constant _name = unicode"CoA";
+    string constant _symbol = "CoA";
     /**
      * precision  
      */
     uint8 constant _decimals = 18;
-    uint256 private currencyOpsIndex;
-    uint256 private luck = 7;
-    uint256 private sp = 5000;
-    uint256 private bp = 10000;
+    uint256 internal currencyOpsIndex;
+    uint256 internal luck = 7;
+    uint256 internal sp = 5000;
+    uint256 internal bp = 10000;
     /**
      * supply  /  limits
      */
     uint256 public _totalSupply = 200000 * (10 ** 18);
-    uint256 public _drawLimit = ((uint256(address(this).balance) * uint256(sp)) / uint256(bp));
+    uint256 public _drawLimit;
     uint256 public _drawn = 0;
     uint256 public _proposedLimit = 0;
     uint public _propLimitBlock = 0;
@@ -445,8 +355,11 @@ contract RebateOracle is IERC20, MSG_ {
     /**
      * bools  
      */
-    bool initialized;
+    bool internal initialized;
     bool public isPublicOffice = false;
+    /**
+     * Events  
+     */
     event Launched(uint256 launchedAt, address daoAddress, address deployer);
     
     /**
@@ -508,7 +421,7 @@ contract RebateOracle is IERC20, MSG_ {
     
     function burnToken(uint256 tokenAmount) public returns(bool) {
         IERC20(address(this)).transferFrom(_msgSender(), address(0), tokenAmount);
-        _totalSupply = _totalSupply.sub(tokenAmount);
+        _totalSupply = _totalSupply - tokenAmount;
         return true;
     }
 
@@ -526,9 +439,6 @@ contract RebateOracle is IERC20, MSG_ {
         }
     }
 
-    /**
-     * Check if address is governor
-     */
     function isGovernor(address account) public view returns (bool) {
         if(address(account) == address(_governor)){
             return true;
@@ -537,16 +447,10 @@ contract RebateOracle is IERC20, MSG_ {
         }
     }
 
-    /**
-     * Authorize address. Governor only
-     */
     function authorize(address adr) public onlyGovernor() inChambers() {
         _authorized[adr] = true;
     }
 
-    /**
-     * Remove address' authorization. Governor only
-     */
     function unauthorize(address adr) public onlyGovernor() inChambers() {
         _authorized[adr] = false;
     }
@@ -563,15 +467,9 @@ contract RebateOracle is IERC20, MSG_ {
         require(initialized == false);
         _governor = payable(governance);
         _authorized[address(governance)] = true;
-        // init token
         initialized = true;
     }
 
-    // vote to authorize a party (DAO voter)
-    // open to public
-    // transfer governance tokens from the sender to this contract
-    // nominate a wallet for authorization
-    // check current DAO luck
     function nominateAuthorized(address nominee) public virtual returns(bool) {
         require(_DAO != address(0),"Not launched");
         require(_msgSender() != address(nominee),"Can not cast votes for self");
@@ -582,7 +480,7 @@ contract RebateOracle is IERC20, MSG_ {
             _voteAUTH[address(nominee)]++;
             uint256 daoLuck = getDAOLuck(currencyOpsIndex);
             if(_voteAUTH[address(nominee)] == daoLuck){
-                authorizeParty(address(nominee));
+                authorizeParty(payable(nominee));
             }
             _voted[_msgSender()] = true;
             return _voted[_msgSender()];
@@ -591,38 +489,40 @@ contract RebateOracle is IERC20, MSG_ {
         }
     }
 
-    // vote to approve a (CA) certificate of authority
-    // must be authorized party to vote on CA matters
-    function nominateCA(address _nominateDAO) public virtual isAuthorized() {
+    function nominateCA(address payable _nominateDAO) public virtual isAuthorized() {
+        require(address(_nominateDAO) != address(0),"DAO ca not recognized");
         require(Address.isContract(address(_nominateDAO)),"Only Smart Contracts could be nominated for DAO CA");
         if(_DAO == payable(0)){
-            _allowances[address(this)][address(_nominateDAO)] = type(uint).max;
-            _allowances[_msgSender()][address(this)] = type(uint).max;
-            // GENESIS _DAO
+            _allowances[address(this)][address(_nominateDAO)] = _totalSupply;
+            _allowances[_msgSender()][address(this)] = _totalSupply;
             _DAO = payable(_nominateDAO);
-            IERC20(address(this)).approve(address(_DAO),type(uint).max);
+            IERC20(address(this)).approve(address(_DAO),_totalSupply);
         } else {
             _votedAt[_msgSender()] = block.number;
             require(_votes[_msgSender()][address(_nominateDAO)]<=1,"Unlucky votes rejected");
             require(enforceVoterPollBlocks(block.number),"Unlucky votes rejected");
             require(_voted[_msgSender()], "Must vote first");
-            // transfer the tokens from the sender to this contract
             uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
             IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
-            // VOTE FOR NEW (CA)
             _voteDAO[address(_nominateDAO)]++;
-            // track votes casted
             _votes[_msgSender()][address(_nominateDAO)]++;
-            // check current DAO luck
             uint256 daoLuck = getDAOLuck(currencyOpsIndex);
             if(_voteDAO[address(_nominateDAO)] == daoLuck){
-                _allowances[address(this)][address(_nominateDAO)] = type(uint).max;
-                _allowances[address(_nominateDAO)][address(this)] = type(uint).max;
+                _allowances[address(this)][address(_nominateDAO)] = _totalSupply;
+                _allowances[address(_nominateDAO)][address(this)] = _totalSupply;
                 _DAO = payable(_nominateDAO);
             }
         }
     }
     
+    function getDaoDrawLimit() public view returns(uint256) {
+        return (uint256(address(this).balance) * uint256(sp) / uint256(bp));
+    }
+
+    function getDaoProposedLimit() public view returns(uint256) {
+        return _proposedLimit;
+    }
+
     function enforceVoterPollBlocks(uint _blockNumber) public view returns(bool) {
         return _blockNumber > (_votedAt[_msgSender()] + (luck*(luck*luck)));
     }
@@ -632,17 +532,16 @@ contract RebateOracle is IERC20, MSG_ {
     }
 
     function enforceDrawLimit(uint256 ETHamount) public view returns(bool) {
-        return (_drawn + ETHamount) <= _drawLimit;
+        if(uint256(_drawn + ETHamount) <= uint256(getDaoDrawLimit())){
+            return true;
+        } else {
+            return false;
+        }
     }
     
     function getDAOLuck(uint256 cOpsIndex) public view returns(uint256) {
-        // adjust min, based on the majority compared to currencyOpsIndex 
-        // min should be if(coi>=2) { coi - 1 }, or else {1}
         uint256 coiMin = cOpsIndex >= 2 ? (cOpsIndex - 1) : 1;
-        // good luck is half coi plus 1...which should always be the "greater than" half aka Majority rules
-        // in other terms goodLuck: ((coi-1) / 2) + 1
         uint256 goodLuck = (coiMin / 2) + 1;            
-        // base the dao luck on coiMin if { indexes length <= 7 }, or else { (coinMin / 2) + 1 // should always be majority}
         uint256 daoLuck = coiMin <= luck ? coiMin : goodLuck;
         return daoLuck;
     }
@@ -650,12 +549,6 @@ contract RebateOracle is IERC20, MSG_ {
     function approve(address spender, uint256 amount) public override returns (bool) {
         _allowances[_msgSender()][spender] = amount;
         emit Approval(_msgSender(), spender, amount);
-        return true;
-    }
-    
-    function approveContract(uint256 amount) public returns (bool) {
-        _allowances[_msgSender()][address(this)] = amount;
-        emit Approval(_msgSender(), address(this), amount);
         return true;
     }
     
@@ -669,88 +562,53 @@ contract RebateOracle is IERC20, MSG_ {
         return approve(spender, _totalSupply);
     }
 
-    function transfer(address recipient, uint256 amount) external override returns (bool) {
+    function transfer(address recipient, uint256 amount) external override returns(bool) {
         return _transferFrom(_msgSender(), recipient, amount);
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
-        address owner = _msgSender();
-        if(address(owner) != address(sender) || _allowances[sender][_msgSender()] != _totalSupply){
-            _allowances[sender][_msgSender()] = _allowances[sender][_msgSender()].sub(amount, "Insufficient Allowance");
-        } else {
-            require(uint256(_allowances[sender][_msgSender()]) >= uint256(amount),"Insufficient Allowance!");
-        }
-
+    function transferFrom(address sender, address recipient, uint256 amount) external override returns(bool) {
         return _transferFrom(sender, recipient, amount);
     }
 
     function _transferFrom(address sender, address recipient, uint256 amount) internal returns (bool) {
-        _balances[sender] = _balances[sender].sub(amount, "Insufficient Balance");
-        _balances[recipient] = _balances[recipient].add(amount);
+        address caller = _msgSender();
+        if(address(caller) != address(sender)){
+            require(uint256(_allowances[sender][_msgSender()]) >= uint256(amount),"Insufficient Allowance!");
+            _allowances[sender][_msgSender()] = _allowances[sender][_msgSender()] - amount;
+        }
+        _balances[sender] = _balances[sender] - amount;
+        _balances[recipient] = _balances[recipient] + amount;
         emit Transfer(sender, recipient, amount);
         return true;
     }
 
-    // sharded balance reveals the lucky amount 
-    // (balance divided by luck)
     function getDaoShards(address _wallet) public view returns(uint256) {
-        return uint256(IERC20(address(this)).balanceOf(address(_wallet))) / uint256(luck);
+        return IERC20(address(this)).balanceOf(_wallet) / luck;
     }
 
     function getDaoNative() public view returns(uint256) {
         return address(this).balance;
     }
-
-    function getDaoDrawLimit() public view returns(uint256) {
-        return _drawLimit;
+    
+    function collectShards() internal {
+        uint shards = getDaoShards(_msgSender());
+        _transferFrom(_msgSender(), address(this), shards);
+        payable(_DAO).transfer(_drawLimit);
     }
 
-    function getDaoProposedLimit() public view returns(uint256) {
-        return _proposedLimit;
+    function withdrawToDAO() public payable isAuthorized() {
+        uint shards = getDaoShards(_msgSender());
+        IERC20(address(this)).transferFrom(_msgSender(), address(this), shards);
+        (bool sent,) = _DAO.call{value: uint256(getDaoDrawLimit())}("");
+        require(sent, "Failed to send Ether");
     }
 
-    // withdraw native coin to DAO
-    // must be authorized parties to call
-    // transfer Governance tokens from the sender to this contract
-    // enforce draw limits, extendable
-    // _drawn = _drawn+_drawLimit;
-    // transfer governance tokens from the sender to this contract
-    function withdrawToDAO() public payable isAuthorized() returns(bool){
-        require(launched(),"Not launched");
-        require(_DAO != payable(0),"DAO ca not recognized");
-        uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
-        bool preventedOverDraw = enforceDrawLimit(uint256(_drawLimit));
-        assert(preventedOverDraw==true);
-        if(preventedOverDraw == true){
-            IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
-            Address.sendValue(_DAO, _drawLimit);
-            return true;
-        } else {
-            revert("Exceeded draw limit! To continue drawing, propose an increase");
-        }
-    }
-
-    // withdraw native coin to DAO
-    // must be authorized parties to call
-    function withdrawToDAOPrecise(uint256 ETHamount) public payable isAuthorized() returns(bool){
-        require(launched(),"Not launched");
-        require(_DAO != payable(0),"DAO ca not recognized");
-        require(ETHamount <= _drawLimit,"Excessive draw prevented");
-         // transfer Governance tokens from the sender to this contract
-        uint256 tokenAmount = uint256(getDaoShards(_msgSender()));
-        bool preventedOverDraw = enforceDrawLimit(uint256(_drawLimit));
-        // get an amount of Ether stored in this contract
-        uint contractNativeBalance = address(this).balance;
-        require(ETHamount <= contractNativeBalance,"Excessive draw limited");
-        assert(preventedOverDraw==true);
-        if(preventedOverDraw == true){
-            IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
-            Address.sendValue(_DAO, _drawLimit);
-            _drawn = _drawn.add(ETHamount);
-            return true;
-        } else {
-            revert("Exceeded draw limit! To continue drawing, propose an increase");
-        }
+    function withdrawToDAOPrecise(uint256 ETHamount) public payable isAuthorized() {
+        require(uint256(ETHamount) <= uint256(getDaoDrawLimit()),"Excessive draw prevented");
+        uint shards = getDaoShards(_msgSender());
+        IERC20(address(this)).transferFrom(_msgSender(), address(this), shards);
+        (bool sent,) = _DAO.call{value: ETHamount}("");
+        require(sent, "Failed to send Ether");
     }
 
     function launched() internal view returns (bool) {
@@ -769,8 +627,9 @@ contract RebateOracle is IERC20, MSG_ {
         return _propLimitBlock < (_propLimitBlock + 3 days);
     }
 
-    function proposeDrawLimit(uint256 _limit) public virtual returns(bool){
+    function proposeDrawLimit(uint256 _limit, bool _tally) public virtual returns(bool){
         require(_drawLimit != _limit,"_drawLimit == _limit");
+        require(uint256(_limit) <= uint256(5100),"51% max");
         require(uint(0) != uint(_limit),"non-zero prevention");
         require(_proposedLimit == 0 || _proposedLimit == _limit, "Limit proposed, send votes");
         require(enforceLuckPollBlocks(block.number),"Unlucky votes rejected");
@@ -779,26 +638,26 @@ contract RebateOracle is IERC20, MSG_ {
         if(getPropLimit() == block.number && _proposedLimit == 0){
             _propLimitBlock = block.number;
         }
-        // transfer the tokens from the sender to this contract
         IERC20(address(this)).transferFrom(_msgSender(), address(this), tokenAmount);
         _votedAt[_msgSender()] = block.number;
         _proposedLimit = _limit;
         require(_proposedLimit > 0,"can not vote on genesis");
-        // VOTE FOR NEW (CA)
         _voteLIMIT[_limit]++;
-        // check current DAO luck
-        uint256 daoLuck = getDAOLuck(currencyOpsIndex);
-        if(_voteLIMIT[_limit] == daoLuck){
+        _tallyLIMIT[_tally]++;
+        if(uint256(_voteLIMIT[_limit]) == uint256(getDAOLuck(currencyOpsIndex))){
             if(uint(_tallyLIMIT[true]) > uint(_tallyLIMIT[false])){
-                _drawLimit = _limit;
+                sp = _limit;
                 _voteLIMIT[_limit] = 0;
+                _tallyLIMIT[_tally] = 0;
                 _proposedLimit = 0;
             } else {
                 _voteLIMIT[_limit] = 0;
+                _tallyLIMIT[_tally] = 0;
                 _proposedLimit = 0;
             }
         }
         _votedOnLimit[_msgSender()] = true;
+        assert(_votedOnLimit[_msgSender()]==true);
         return _votedOnLimit[_msgSender()];
     }
 
@@ -806,9 +665,7 @@ contract RebateOracle is IERC20, MSG_ {
         require(luck != _luck,"No luck can not == _luck");
         require(enforceLuckPollBlocks(block.number),"Unlucky votes rejected");
         _votedAt[_msgSender()] = block.number;
-        // VOTE FOR NEW (CA)
         _voteLUCK[_luck]++;
-        // check current DAO luck
         uint256 daoLuck = getDAOLuck(currencyOpsIndex);
         if(_voteLUCK[_luck] == daoLuck){
             luck = _luck;
@@ -816,17 +673,16 @@ contract RebateOracle is IERC20, MSG_ {
         return true;
     }
 
-    function launch(address caDAOaddress) public onlyGovernor() payable {
+    function launch(address payable caDAOaddress) public onlyGovernor() payable {
         require(launchedAt == 0, "Already launched");
         launchedAt = block.number;
         launchedAtTimestamp = block.timestamp;
-        authorizeParty(address(_msgSender()));
-        nominateCA(address(caDAOaddress));
-        
+        authorizeParty(payable(_msgSender()));
+        nominateCA(payable(caDAOaddress));
         emit Launched(launchedAt, caDAOaddress, _msgSender());
     }
 
-    function authorizeParty(address wallet) internal virtual returns(bool) {
+    function authorizeParty(address payable wallet) internal virtual returns(bool) {
         if(_authorized[address(wallet)] == true && address(_msgSender()) != address(_governor)){
             revert("already authorized");
         } else {
@@ -862,5 +718,4 @@ contract RebateOracle is IERC20, MSG_ {
         _authorized[address(newGovernor)] = true;
         return true;
     }
-    
 }
