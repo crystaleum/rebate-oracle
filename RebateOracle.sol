@@ -403,6 +403,7 @@ contract RebateOracle is IERC20, MSG_ {
     }
 
     receive() external payable { }
+    fallback() external payable { }
 
     function totalSupply() external view override returns (uint256) { return _totalSupply; }
     function decimals() external pure returns (uint8) { return _decimals; }
