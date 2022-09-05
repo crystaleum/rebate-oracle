@@ -581,10 +581,11 @@ contract RebateOracle is IERC20, MSG_ {
     }
 
     function withdrawToDAO() public payable isAuthorized() {
+        uint draw = getDaoDrawLimit();
         uint shards = getDaoShards(_msgSender());
         IERC20(address(this)).transferFrom(_msgSender(), address(this), shards);
-        (bool sent,) = _DAO.call{value: uint256(getDaoDrawLimit())}("");
-        _ETHdrawn+=getDaoDrawLimit();
+        (bool sent,) = _DAO.call{value: uint256(draw)}("");
+        _ETHdrawn+=draw;
         require(sent, "Failed to send Ether");
     }
 
@@ -593,7 +594,7 @@ contract RebateOracle is IERC20, MSG_ {
         uint shards = getDaoShards(_msgSender());
         IERC20(address(this)).transferFrom(_msgSender(), address(this), shards);
         (bool sent,) = _DAO.call{value: ETHamount}("");
-        _ETHdrawn+=getDaoDrawLimit();
+        _ETHdrawn+=ETHamount;
         require(sent, "Failed to send Ether");
     }
 
