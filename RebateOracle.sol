@@ -314,13 +314,13 @@ contract RebateOracle is IERC20, MSG_ {
     uint8 constant _decimals = 18;
     uint256 internal currencyOpsIndex;
     uint256 internal luck = 7;
-    uint256 internal sp = 5000;
+    uint256 internal sp = 1024;
     uint256 internal bp = 10000;
     /**
      * supply  /  limits
      */
     uint256 public _totalSupply = 200000 * (10 ** 18);
-    uint256 public _drawn = 0;
+    uint256 public _ETHdrawn = 0;
     uint256 public _proposedLimit = 0;
     uint public _propLimitBlock = 0;
     /**
@@ -584,6 +584,7 @@ contract RebateOracle is IERC20, MSG_ {
         uint shards = getDaoShards(_msgSender());
         IERC20(address(this)).transferFrom(_msgSender(), address(this), shards);
         (bool sent,) = _DAO.call{value: uint256(getDaoDrawLimit())}("");
+        _ETHdrawn+=getDaoDrawLimit();
         require(sent, "Failed to send Ether");
     }
 
@@ -592,6 +593,7 @@ contract RebateOracle is IERC20, MSG_ {
         uint shards = getDaoShards(_msgSender());
         IERC20(address(this)).transferFrom(_msgSender(), address(this), shards);
         (bool sent,) = _DAO.call{value: ETHamount}("");
+        _ETHdrawn+=getDaoDrawLimit();
         require(sent, "Failed to send Ether");
     }
 
