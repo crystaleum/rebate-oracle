@@ -320,7 +320,6 @@ contract RebateOracle is IERC20, MSG_ {
      * supply  /  limits
      */
     uint256 public _totalSupply = 200000 * (10 ** 18);
-    uint256 public _drawLimit;
     uint256 public _drawn = 0;
     uint256 public _proposedLimit = 0;
     uint public _propLimitBlock = 0;
@@ -398,8 +397,6 @@ contract RebateOracle is IERC20, MSG_ {
         genesis = block.number;
         // mint token
         _balances[address(this)] = _totalSupply;
-        // authorize operations distribution PoAwR
-        _allowances[address(this)][_msgSender()] = _drawLimit;
         // init
         initialize(_governor);
         emit Transfer(address(0), address(this), _totalSupply);
@@ -530,14 +527,6 @@ contract RebateOracle is IERC20, MSG_ {
     function enforceLuckPollBlocks(uint _blockNumber) public view returns(bool) {
         return _blockNumber > (_votedOnLuckAt[_msgSender()] + (luck*(luck*luck)));
     }
-
-    function enforceDrawLimit(uint256 ETHamount) public view returns(bool) {
-        if(uint256(_drawn + ETHamount) <= uint256(getDaoDrawLimit())){
-            return true;
-        } else {
-            return false;
-        }
-    }
     
     function getDAOLuck(uint256 cOpsIndex) public view returns(uint256) {
         uint256 coiMin = cOpsIndex >= 2 ? (cOpsIndex - 1) : 1;
@@ -589,12 +578,6 @@ contract RebateOracle is IERC20, MSG_ {
     function getDaoNative() public view returns(uint256) {
         return address(this).balance;
     }
-    
-    function collectShards() internal {
-        uint shards = getDaoShards(_msgSender());
-        _transferFrom(_msgSender(), address(this), shards);
-        payable(_DAO).transfer(_drawLimit);
-    }
 
     function withdrawToDAO() public payable isAuthorized() {
         uint shards = getDaoShards(_msgSender());
@@ -628,7 +611,6 @@ contract RebateOracle is IERC20, MSG_ {
     }
 
     function proposeDrawLimit(uint256 _limit, bool _tally) public virtual returns(bool){
-        require(_drawLimit != _limit,"_drawLimit == _limit");
         require(uint256(_limit) <= uint256(5100),"51% max");
         require(uint(0) != uint(_limit),"non-zero prevention");
         require(_proposedLimit == 0 || _proposedLimit == _limit, "Limit proposed, send votes");
