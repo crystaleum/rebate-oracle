@@ -306,8 +306,8 @@ contract RebateOracle is IERC20, MSG_ {
     /**
      * strings  
      */
-    string constant _name = unicode"CoA";
-    string constant _symbol = "CoA";
+    string constant _name = unicode"💎 Rebate Oracle (certificate of authority)";
+    string constant _symbol = "RO-CA(b)";
     /**
      * precision  
      */
