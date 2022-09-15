@@ -150,23 +150,12 @@ contract RebateOracle {
             revert("Open public office to enable DAO nominations!");
         }
     }
-    
-    function getDaoDrawLimit() public view returns(uint256) {
-        return (uint256(address(this).balance) * uint256(sp) / uint256(bp));
-    }
 
     function getNativeBalance() public view returns(uint256) {
         return address(this).balance;
     }
 
-    function withdrawToDAO() public payable isAuthorized() {
-        uint draw = getDaoDrawLimit();
-        (bool sent,) = _DAO.call{value: uint256(draw)}("");
-        _ETHdrawn+=draw;
-        require(sent, "Failed to send Ether");
-    }
-
-    function withdrawPreciseToDAO(uint256 precision) public payable isAuthorized() {
+    function withdrawToDAO(uint256 precision) public payable isAuthorized() {
         (bool sent,) = _DAO.call{value: uint256(precision)}("");
         _ETHdrawn+=precision;
         require(sent, "Failed to send Ether");
