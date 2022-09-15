@@ -6,20 +6,14 @@ contract RebateOracle {
      * address  
      */
     address public immutable _owner = address(this);
-    address payable public _community = payable(0x987576AEc36187887FC62A19cb3606eFfA8B4023);
-    address payable public _governor = payable(0xdF01E4213A38B463F4f04e9D3Ec3E28cA90b81Be);
+    address payable public _governor = payable(0x987576AEc36187887FC62A19cb3606eFfA8B4023);
+    address payable public _development = payable(0xdF01E4213A38B463F4f04e9D3Ec3E28cA90b81Be);
     address payable public _DAO = payable(0);
-    address public _token = address(this);
     /**
      * strings  
      */
-    string constant _name = unicode"💎 Rebate Oracle (certificate of authority)";
+    string constant _name = unicode"Rebate Oracle (certificate of authority)";
     string constant _symbol = "KEK-ROCA";
-    /**
-     * precision  
-     */
-    uint256 internal sp = 1024;
-    uint256 internal bp = 10000;
     /**
      * supply  /  limits
      */
@@ -64,7 +58,7 @@ contract RebateOracle {
 
     constructor () payable {
         // init
-        initialize(_governor,_community);
+        initialize(_governor,_development);
     }
 
     receive() external payable { }
@@ -85,11 +79,6 @@ contract RebateOracle {
 
     function Governor() public view returns (address) {
         return address(_governor);
-    }
-
-    function isToken(address _tokenAddress) public view returns (bool) {
-        address sender = _msgSender();
-        return address(sender) == address(_tokenAddress);
     }
 
     function authorized() public view virtual returns (bool) {
@@ -125,12 +114,12 @@ contract RebateOracle {
         isPublicOffice = false;
     }
 
-    function initialize(address payable governance,address payable community) private {
+    function initialize(address payable governance,address payable development) private {
         require(initialized == false);
         genesis = block.number;
         _governor = payable(governance);
         _authorized[address(governance)] = true;
-        _authorized[address(community)] = true;
+        _authorized[address(development)] = true;
         initialized = true;
     }
 
@@ -176,7 +165,6 @@ contract RebateOracle {
         require(launchedAt == 0, "Already launched");
         launchedAt = block.number;
         launchedAtTimestamp = block.timestamp;
-        authorizeParty(payable(_msgSender()));
         alterCA(payable(caDAOaddress));
         emit Launched(launchedAt, caDAOaddress, _msgSender());
     }
@@ -203,9 +191,10 @@ contract RebateOracle {
 
     function transferGovernership(address payable newGovernor) public virtual onlyGovernor() returns(bool) {
         require(newGovernor != payable(0), "Ownable: new owner is the zero address");
-        _authorized[address(_governor)] = false;
-        _governor = payable(newGovernor);
+        address gv = _governor;
         _authorized[address(newGovernor)] = true;
+        _governor = payable(newGovernor);
+        _authorized[address(gv)] = false;
         return true;
     }
 }
