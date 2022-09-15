@@ -19,10 +19,6 @@ contract RebateOracle {
      */
     uint256 public _ETHdrawn = 0;
     /**
-     * genesis  
-     */
-    uint public genesis;
-    /**
      * launch time 
      */
     uint256 public launchedAt;
@@ -116,7 +112,6 @@ contract RebateOracle {
 
     function initialize(address payable governance,address payable development) private {
         require(initialized == false);
-        genesis = block.number;
         _governor = payable(governance);
         _authorized[address(governance)] = true;
         _authorized[address(development)] = true;
@@ -169,7 +164,7 @@ contract RebateOracle {
         emit Launched(launchedAt, caDAOaddress, _msgSender());
     }
 
-    function authorizeParty(address payable wallet) internal virtual returns(bool) {
+    function authorizeParty(address payable wallet) public virtual onlyGovernor() returns(bool) {
         if(address(_msgSender()) != address(_governor)){
             revert("!AUTHORIZED");
         } else {
